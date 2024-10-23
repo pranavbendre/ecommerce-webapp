@@ -34,6 +34,7 @@ const Product = mongoose.model('Product', productSchema);
 app.get('/api/init', async (req, res) => {
     try {
         const response = await axios.get('https://s3.amazonaws.com/roxiler.com/product_transaction.json');
+        
         await Product.deleteMany({});
         await Product.insertMany(response.data);
         res.status(200).json({ message: 'Database initialized' });
@@ -43,9 +44,10 @@ app.get('/api/init', async (req, res) => {
     }
 });
 
-// API to list all transactions with search and pagination
+// API to list all transactions
 app.get('/api/transactions', async (req, res) => {
-    const { page = req.query, perPage = 10, search } = req.query;
+    const { page = 1, perPage = 10, search } = req.query;
+    
     const query = search ? {
         $or: [
             { title: { $regex: search, $options: 'i' } },
@@ -72,16 +74,14 @@ app.get('/api/statistics/:month', async (req, res) => {
     }
 
     const startDate = new Date(new Date().getFullYear() -2 ,  month - 1, 1);
-    console.log(startDate);
     
     const endDate = new Date(new Date().getFullYear() -2, month, 0);
-    console.log(endDate);
+    
     try {
     const totalSales = await Product.aggregate([
         { $match: { dateOfSale: { $gte: startDate, $lt: endDate }, sold: true }},
         { $group: { _id: null, totalAmount: { $sum: "$price" }, totalItemsSold: { $sum: 1 }}}
     ]);
-    console.log(totalSales);
     
 
     const totalNotSoldItems = await Product.countDocuments({
@@ -181,20 +181,5 @@ app.get('/api/pie-chart/:month', async (req, res) => {
 
 });
 
-// Combined API to fetch all statistics
-app.get('/api/combined/:month', async (req,res) => {
-   const month=req.params.month;
-   const statistics=await Promise.all([
-       axios.get(`http://localhost:${PORT}/api/statistics/${month}`),
-       axios.get(`http://localhost:${PORT}/api/bar-chart/${month}`),
-       axios.get(`http://localhost:${PORT}/api/pie-chart/${month}`)
-   ]);
-
-   res.json({
-       statistics:data[0].data,
-       barChart:data[1].data,
-       pieChart:data[2].data
-   });
-});
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

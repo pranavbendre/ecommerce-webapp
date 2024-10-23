@@ -12,14 +12,16 @@ ChartJS.register(
 );
 
 function App() {
-   const [data, setData] = useState([]);
-   const [page, setPage] = useState(1);
+   let [page, setPage] = useState(1);
    const [transactions, setTransactions] = useState([]);
+   const [searchedData, setSearchedData] = useState([]);
+   console.log(searchedData);
+   
+   const [stringLength, setStringLength] = useState(0);
    const [statistics, setStatistics] = useState({});
    const [barData, setBarData] = useState([]);
    const [pieData, setPieData] = useState([]);
-   const [month, setMonth] = useState(3); // Default to March
-   console.log(month);
+   const [month, setMonth] = useState(1);
    
 
    useEffect(() => {
@@ -32,9 +34,7 @@ function App() {
 
 
    const fetchData = async () => {
-      const response = await axios.get(`http://localhost:5000/api/init`);
-      setData(response.data);
-        
+      await axios.get(`http://localhost:5000/api/init`);
    };
 
    const fetchTransactions = async () => {
@@ -57,11 +57,26 @@ function App() {
       setPieData(response.data);
    };
 
+   const searchData = (element) => {
+         setStringLength(element.length)
+         setSearchedData(transactions.filter((transaction)=>
+            transaction.title.toLowerCase().includes(element) ||
+            parseInt(transaction.price) === parseInt(element)) /*.includes() used to comapre two strings and .filter() is used to common out matched values in an array */
+         );         
+   }
+
 
    return (
       <div className="App">
-         <h1 style={{margin: "33px 0px"}}>Product Transactions</h1>
-         <select style={{position: "relative",left: "85vw",padding: "0px 6px",fontSize: "22px",margin: "14px"}} onChange={(e) => setMonth(e.target.value)} value={month}>
+         <h1 style={{margin: "46px 0px 38px 0px", fontSize: "28px", display: "flex", justifyContent: "center", textDecoration: "underline", color: "gray", fontWeight: "bold"}}>Product Transactions</h1>
+
+      <div className="container-fluid" style={{position: "absolute", padding: "0px 465px", right: "330px"}}>
+      <form className="d-flex" role="search">
+         <input className="form-control me-2" type="search" placeholder="Search" aria-label="Search" onChange={(e) => searchData(e.target.value.toLowerCase())} />
+      </form>
+      </div>
+
+         <select style={{position: "relative",left: "80vw",padding: "3px 2px",fontSize: "19px",margin: "14px", bottom:"13px", background: "black", color: "white"}} onChange={(e) => setMonth(e.target.value)} value={month}>
             <option value="1">January</option>
             <option value="2">February</option>
             <option value="3">March</option>
@@ -77,17 +92,24 @@ function App() {
          </select>
 
          {/* Transactions Table */}
-         <table className='table table-primary table-bordered border-primary'>
+         <table className='table table-light table-bordered border-primary table-striped' style={{width: "84vw", position: "relative", left: "128px"}}>
             <thead>
                <tr>
-                  <th>Title</th>
-                  <th>Description</th>
-                  <th>Price</th>
-                  <th>Category</th>
+                  <th scope="col">Title</th>
+                  <th scope="col">Description</th>
+                  <th scope="col">Price</th>
+                  <th scope="col">Category</th>
                </tr>
             </thead>
             <tbody>
-               {transactions.map(transaction => (
+               {searchedData.length > 0 && stringLength > 0 ? searchedData.map(data => (
+                    <tr key={data.id}>
+                    <td>{data.title}</td>
+                    <td>{data.description}</td>
+                    <td>{data.price}</td>
+                    <td>{data.category}</td>
+                 </tr>
+                )):transactions.map(transaction => (
                   <tr key={transaction.id}>
                      <td>{transaction.title}</td>
                      <td>{transaction.description}</td>
@@ -95,23 +117,33 @@ function App() {
                      <td>{transaction.category}</td>
                   </tr>
                ))}
+
             </tbody>
          </table>
 
-          <button disabled={page<=1} type="button" className='btn' onClick={()=>setPage({page: page-1})}>&larr; Previous </button>
+          <button disabled={page<=1} type="button" className='btn' style={{color: "black", backgroundColor: "white", fontSize: "13px", position: "absolute", right: "210px"}} onClick={()=>{setPage(page-=1);fetchTransactions()}}>&larr; Previous </button>
 
-         <button disabled={page>60} type="button" className='btn' onClick={()=>setPage({page:page+1})}>&rarr; Next </button>
+          <p style={{color: "white", position: "absolute", left: "1077px", marginTop: "4px"}}>{page}</p>
+
+         <button disabled={page>=6} type="button" className='btn' style={{color: "black", backgroundColor: "white", fontSize: "13px", position: "absolute", right: "70px", padding: "6px 22px"}} onClick={()=>{setPage(page+=1);fetchTransactions()}}>&rarr; Next </button>
+         
+         
 
          {/* Statistics */}
          <div className="statistics">
-            <h2 style={{margin: "40px 0px"}}>Statistics for Month {month}</h2>
+            <h2 style={{margin: "133px 0px 55px 0px", fontSize: "28px", display: "flex", justifyContent: "center", textDecoration: "underline", color: "gray", fontWeight: "bold"}}>Statistics for Month {month}</h2>
+
+            <div className="statistics-child" style={{color:"white", position:"relative", margin: "43px 65px"}}>
             <p>Total Sales Amount : ${statistics.totalSalesAmount}</p>
             <p>Total Sold Items : {statistics.totalItemsSold}</p>
             <p>Total Not Sold Items : {statistics.totalNotSoldItems}</p>
+            </div>
+        
+
          </div>
 
          {/* Bar Chart */}
-         <Bar data={{
+         <Bar style={{background:"#505050bf", position: "relative", left: "65px", display: "flex", maxWidth: "91%"}} data={{
                labels:['0-100','101-200','201-300','301-400','401-500','501-600','601-700','701-800','801-900','901-above'],
                datasets:[{
                   label:'Number of Items',
@@ -123,7 +155,7 @@ function App() {
          }} />
 
          {/* Pie Chart */}
-         <Pie data={{labels: ["men's clothing", "jewelery", "	electronics", "women's clothing"],
+         <Pie style={{position: "relative", padding: "204px", bottom: "94px"}} data={{labels: ["men's clothing", "jewelery", "	electronics", "women's clothing"],
                datasets: [
             {
             data: [...pieData.map(item=>item.count)],
